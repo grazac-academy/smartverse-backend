@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: smart-vert
+
+  config:
+    import: "optional:file:.env[.properties]"
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
