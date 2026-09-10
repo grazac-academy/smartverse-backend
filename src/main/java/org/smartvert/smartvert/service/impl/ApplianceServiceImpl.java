@@ -1,4 +1,4 @@
-package org.smartvert.smartvert.service;
+package org.smartvert.smartvert.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.smartvert.smartvert.exception.ResourceNotFoundException;
@@ -9,8 +9,13 @@ import org.smartvert.smartvert.model.entity.Appliance;
 import org.smartvert.smartvert.model.entity.ApplianceCategory;
 import org.smartvert.smartvert.repository.ApplianceCategoryRepository;
 import org.smartvert.smartvert.repository.ApplianceRepository;
+import org.smartvert.smartvert.service.ApplianceService;
+import org.smartvert.smartvert.service.FileStorageService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -22,6 +27,7 @@ public class ApplianceServiceImpl implements ApplianceService {
     private final ApplianceRepository applianceRepository;
     private final ApplianceCategoryRepository categoryRepository;
     private final ApplianceMapper mapper;
+    private final FileStorageService fileStorageService;
 
     @Override
     @Transactional(readOnly = true)
@@ -55,9 +61,19 @@ public class ApplianceServiceImpl implements ApplianceService {
 
     @Override
     @Transactional
-    public ApplianceDTO createAppliance(ApplianceDTO dto) {
+    public ApplianceDTO createAppliance(ApplianceDTO dto, MultipartFile file) {
         ApplianceCategory category = categoryRepository.findById(dto.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.categoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
+
+        String imageUrl = dto.imageUrl();
+        if (file != null && !file.isEmpty()) {
+            try {
+                FileStorageService.UploadResult result = fileStorageService.upload(file, "appliances");
+                imageUrl = result.url();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload image", e);
+            }
+        }
 
         Appliance appliance = Appliance.builder()
                 .category(category)
@@ -71,6 +87,7 @@ public class ApplianceServiceImpl implements ApplianceService {
                 .surgeMultiplier(dto.surgeMultiplier())
                 .heavyLoad(dto.heavyLoad())
                 .active(true)
+                .imageUrl(imageUrl)
                 .build();
 
         Appliance saved = applianceRepository.save(appliance);
@@ -79,12 +96,12 @@ public class ApplianceServiceImpl implements ApplianceService {
 
     @Override
     @Transactional
-    public ApplianceDTO updateAppliance(UUID id, ApplianceDTO dto) {
+    public ApplianceDTO updateAppliance(UUID id, ApplianceDTO dto, MultipartFile file) {
         Appliance appliance = applianceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appliance not found with id: " + id));
 
         ApplianceCategory category = categoryRepository.findById(dto.categoryId())
-                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + dto.categoryId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
         appliance.setCategory(category);
         appliance.setCode(dto.code());
@@ -96,6 +113,17 @@ public class ApplianceServiceImpl implements ApplianceService {
         appliance.setSurgeApplicable(dto.surgeApplicable());
         appliance.setSurgeMultiplier(dto.surgeMultiplier());
         appliance.setHeavyLoad(dto.heavyLoad());
+
+        if (file != null && !file.isEmpty()) {
+            try {
+                FileStorageService.UploadResult result = fileStorageService.upload(file, "appliances");
+                appliance.setImageUrl(result.url());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload image", e);
+            }
+        } else if (dto.imageUrl() != null) {
+            appliance.setImageUrl(dto.imageUrl());
+        }
 
         Appliance updated = applianceRepository.save(appliance);
         return mapper.toDTO(updated);

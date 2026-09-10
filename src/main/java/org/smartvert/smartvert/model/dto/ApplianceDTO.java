@@ -15,5 +15,6 @@ public record ApplianceDTO(
     Boolean surgeApplicable,
     BigDecimal surgeMultiplier,
     Boolean heavyLoad,
-    Boolean active
+    Boolean active,
+    String imageUrl
 ) {}

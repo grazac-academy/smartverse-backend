@@ -31,6 +31,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.failure(finalMsg));
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolation(org.springframework.dao.DataIntegrityViolationException ex) {
+        String msg = "A resource with the same unique identifier already exists.";
+        if (ex.getMessage() != null && ex.getMessage().contains("appliance_code_key")) {
+            msg = "An appliance with this code already exists.";
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure(msg));
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        String msg = "Invalid JSON payload format.";
+        if (ex.getCause() instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife && ife.getTargetType() == java.util.UUID.class) {
+            msg = "Invalid UUID format.";
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.failure(msg));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -183,7 +184,7 @@ public class ControllerTests {
     }
 
     @Test
-    void shouldAllowAdminWithAuth() throws Exception {
+    void shouldAllowAdminWithJsonAuth() throws Exception {
         String requestBody = """
                 {
                     "categoryId": "%s",
@@ -201,13 +202,60 @@ public class ControllerTests {
                 """.formatted(categoryId);
 
         mockMvc.perform(post("/api/v1/admin/appliances")
-                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+                .content(requestBody)
+                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message", is("Appliance created successfully")))
                 .andExpect(jsonPath("$.data.code", is("tv")))
                 .andExpect(jsonPath("$.data.name", is("Television")));
+    }
+
+    @Test
+    void shouldAllowAdminWithMultipartForm() throws Exception {
+        mockMvc.perform(multipart("/api/v1/admin/appliances")
+                .param("categoryId", categoryId.toString())
+                .param("code", "fan")
+                .param("name", "Ceiling Fan")
+                .param("defaultWattage", "75.00")
+                .param("minWattage", "30.00")
+                .param("maxWattage", "100.00")
+                .param("defaultVoltage", "220")
+                .param("surgeApplicable", "false")
+                .param("surgeMultiplier", "1.00")
+                .param("heavyLoad", "false")
+                .param("active", "true")
+                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Appliance created successfully")))
+                .andExpect(jsonPath("$.data.code", is("fan")));
+    }
+
+    @Test
+    void shouldFailWhenCategoryNotFound() throws Exception {
+        UUID nonExistentCategoryId = UUID.randomUUID();
+        String requestBody = """
+                {
+                    "categoryId": "%s",
+                    "code": "unknown-device",
+                    "name": "Unknown Device",
+                    "defaultWattage": 100.00,
+                    "minWattage": 50.00,
+                    "maxWattage": 200.00,
+                    "defaultVoltage": 220,
+                    "surgeApplicable": false,
+                    "surgeMultiplier": 1.00,
+                    "heavyLoad": false,
+                    "active": true
+                }
+                """.formatted(nonExistentCategoryId);
+
+        mockMvc.perform(post("/api/v1/admin/appliances")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody)
+                .with(SecurityMockMvcRequestPostProcessors.user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", is("Category not found")));
     }
 
     @Test

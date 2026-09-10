@@ -2,12 +2,18 @@ spring:
   application:
     name: smart-vert
 
+  security:
+    user:
+      name: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:admin123}
+
   config:
     import: "optional:file:.env[.properties]"
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:${DB_PORT}/${DB_NAME}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+
     username: ${DB_USER}
     password: ${DB_PASSWORD}
 
@@ -17,9 +23,14 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        show_sql: true
+        format_sql: true
+    open-in-view: false
 
   flyway:
     enabled: true
     baseline-on-migrate: true
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo_cloud}
+  api-key: ${CLOUDINARY_API_KEY:demo_key}
+  api-secret: ${CLOUDINARY_API_SECRET:demo_secret}

@@ -25,7 +25,8 @@ public class ApplianceMapper {
                 appliance.getSurgeApplicable(),
                 appliance.getSurgeMultiplier(),
                 appliance.getHeavyLoad(),
-                appliance.getActive()
+                appliance.getActive(),
+                appliance.getImageUrl()
         );
     }
 

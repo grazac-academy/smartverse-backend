@@ -5,15 +5,15 @@ import org.smartvert.smartvert.model.dto.ApiResponse;
 import org.smartvert.smartvert.model.dto.ApplianceCategoryDTO;
 import org.smartvert.smartvert.model.dto.ApplianceDTO;
 import org.smartvert.smartvert.service.ApplianceService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping(value = "/api/v1", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ApplianceController {
 
     private final ApplianceService applianceService;

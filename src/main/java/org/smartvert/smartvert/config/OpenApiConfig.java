@@ -5,8 +5,11 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -18,6 +21,10 @@ public class OpenApiConfig {
                         .title("SmartVert API")
                         .version("1.0.0")
                         .description("Backend API for the SmartVert solar sizing and inverter estimation engine."))
+                .servers(List.of(
+                        new Server().url("https://smart-vert-app.onrender.com").description("Production Server"),
+                        new Server().url("http://localhost:8080").description("Local Development Server")
+                ))
                 .addSecurityItem(new SecurityRequirement().addList("basicScheme"))
                 .components(new Components()
                         .addSecuritySchemes("basicScheme", new SecurityScheme()
@@ -26,3 +33,4 @@ public class OpenApiConfig {
                                 .description("HTTP Basic authentication for administrative operations")));
     }
 }
+

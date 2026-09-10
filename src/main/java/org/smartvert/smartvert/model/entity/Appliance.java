@@ -53,6 +53,9 @@ public class Appliance {
     @Column(nullable = false)
     private Boolean active;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
