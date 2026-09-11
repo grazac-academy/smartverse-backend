@@ -14,23 +14,25 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
-    @Bean
-    public OpenAPI customOpenAPI() {
-        return new OpenAPI()
-                .info(new Info()
-                        .title("SmartVert API")
-                        .version("1.0.0")
-                        .description("Backend API for the SmartVert solar sizing and inverter estimation engine."))
-                .servers(List.of(
-                        new Server().url("https://smart-vert-app.onrender.com").description("Production Server"),
-                        new Server().url("http://localhost:8080").description("Local Development Server")
-                ))
-                .addSecurityItem(new SecurityRequirement().addList("basicScheme"))
-                .components(new Components()
-                        .addSecuritySchemes("basicScheme", new SecurityScheme()
-                                .type(SecurityScheme.Type.HTTP)
-                                .scheme("basic")
-                                .description("HTTP Basic authentication for administrative operations")));
-    }
+        @Bean
+        public OpenAPI customOpenAPI() {
+                return new OpenAPI()
+                                .info(new Info()
+                                                .title("SmartVert API")
+                                                .version("1.0.0")
+                                                .description("Backend API for the SmartVert solar sizing and inverter estimation engine."))
+                                .servers(List.of(
+                                                new Server().url("https://smart-vert-app.onrender.com")
+                                                                .description("Production Server"),
+                                                new Server().url("http://localhost:8080")
+                                                                .description("Local Development Server")))
+                                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                                .components(new Components()
+                                                .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                                                                .name("bearerAuth")
+                                                                .type(SecurityScheme.Type.HTTP)
+                                                                .scheme("bearer")
+                                                                .bearerFormat("JWT")
+                                                                .description("JWT Bearer access token authentication")));
+        }
 }
-

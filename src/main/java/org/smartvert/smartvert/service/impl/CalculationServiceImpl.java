@@ -48,7 +48,7 @@ public class CalculationServiceImpl implements CalculationService {
 
         for (LoadItemRequest itemRequest : request.items()) {
             Appliance appliance = applianceRepository.findById(itemRequest.applianceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Appliance not found with id: " + itemRequest.applianceId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Appliance not found"));
 
             if (!appliance.getActive()) {
                 throw new ValidationException("Appliance is inactive: " + appliance.getName());
