@@ -22,10 +22,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         AppUser appUser = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        return new User(
-                appUser.getEmail(),
-                appUser.getPassword(),
-                Collections.emptyList()
-        );
+        return new User(appUser.getEmail(), appUser.getPassword(), Collections.emptyList());
     }
 }
