@@ -3,22 +3,19 @@ package org.smartvert.smartvert.service.impl;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.smartvert.smartvert.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-@Service
+@Service("smtpEmailService")
+@ConditionalOnProperty(name = "app.mail.provider", havingValue = "smtp")
 @Slf4j
 @RequiredArgsConstructor
-public class EmailServiceImpl implements EmailService {
+public class EmailServiceImpl extends AbstractEmailService {
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
@@ -67,40 +64,5 @@ public class EmailServiceImpl implements EmailService {
             log.warn("Failed to deliver email to [{}] via SMTP: {}. Link: [{}]", toEmail, e.getMessage(), actionUrl);
         }
     }
-
-    private String buildVerificationEmailTemplate(String fullName, String otpCode, String verificationUrl) {
-        String template = loadTemplate("email-verification.html");
-        return template.replace("{{fullName}}", escapeHtml(fullName))
-                .replace("{{otpCode}}", escapeHtml(otpCode))
-                .replace("{{verificationUrl}}", verificationUrl);
-    }
-
-    private String buildPasswordResetEmailTemplate(String fullName, String otpCode, String resetUrl) {
-        String template = loadTemplate("password-reset.html");
-        return template.replace("{{fullName}}", escapeHtml(fullName))
-                .replace("{{otpCode}}", escapeHtml(otpCode))
-                .replace("{{resetUrl}}", resetUrl);
-    }
-
-    private String loadTemplate(String templateName) {
-        try (InputStream is = getClass().getResourceAsStream("/templates/" + templateName)) {
-            if (is == null) {
-                log.warn("Template /templates/{} not found on classpath", templateName);
-                return "";
-            }
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.error("Error reading email template /templates/{}", templateName, e);
-            return "";
-        }
-    }
-
-    private String escapeHtml(String input) {
-        if (input == null) return "";
-        return input.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
-    }
 }
+

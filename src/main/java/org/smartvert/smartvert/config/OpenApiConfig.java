@@ -24,6 +24,8 @@ public class OpenApiConfig {
                                 .servers(List.of(
                                                 new Server().url("https://smart-vert-app.onrender.com")
                                                                 .description("Production Server"),
+                                        new Server().url("https://smartvert-1mu7kn9j.b4a.run")
+                                                                .description("Production Server"),
                                                 new Server().url("http://localhost:8080")
                                                                 .description("Local Development Server")))
                                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))

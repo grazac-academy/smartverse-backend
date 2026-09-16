@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SavedCalculationServiceImpl implements SavedCalculationService {
 
     private final SavedCalculationRepository savedCalculationRepository;
