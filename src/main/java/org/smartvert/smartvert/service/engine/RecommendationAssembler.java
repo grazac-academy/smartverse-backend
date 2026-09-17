@@ -28,35 +28,35 @@ public class RecommendationAssembler {
             List<CalculatorInputItem> items) {
 
         CalculationResult.Summary summary = new CalculationResult.Summary(
-                runningLoad.setScale(2, RoundingMode.HALF_UP),
-                peakLoad.setScale(2, RoundingMode.HALF_UP),
-                dailyEnergyWh.setScale(2, RoundingMode.HALF_UP)
+                runningLoad != null ? runningLoad.setScale(2, RoundingMode.HALF_UP) : null,
+                peakLoad != null ? peakLoad.setScale(2, RoundingMode.HALF_UP) : null,
+                dailyEnergyWh != null ? dailyEnergyWh.setScale(2, RoundingMode.HALF_UP) : null
         );
 
         CalculationResult.BatteryRecommendation battery = new CalculationResult.BatteryRecommendation(
                 systemVoltage,
-                capacityAh.setScale(2, RoundingMode.HALF_UP),
-                batteryEnergyKwh.setScale(2, RoundingMode.HALF_UP),
-                dodPercentage.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)
+                capacityAh != null ? capacityAh.setScale(2, RoundingMode.HALF_UP) : null,
+                batteryEnergyKwh != null ? batteryEnergyKwh.setScale(2, RoundingMode.HALF_UP) : null,
+                dodPercentage != null ? dodPercentage.multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP) : null
         );
 
         CalculationResult.SolarRecommendation solar = new CalculationResult.SolarRecommendation(
-                solarCapacityKw.setScale(2, RoundingMode.HALF_UP),
+                solarCapacityKw != null ? solarCapacityKw.setScale(2, RoundingMode.HALF_UP) : null,
                 solarPanelCount,
-                panelWatts.setScale(2, RoundingMode.HALF_UP)
+                panelWatts != null ? panelWatts.setScale(2, RoundingMode.HALF_UP) : null
         );
 
         CalculationResult.Recommendation recommendation = new CalculationResult.Recommendation(
-                recommendedInverterKva.setScale(2, RoundingMode.HALF_UP),
+                recommendedInverterKva != null ? recommendedInverterKva.setScale(2, RoundingMode.HALF_UP) : null,
                 battery,
                 solar
         );
 
-        List<CalculationResult.BreakdownItem> breakdown = items.stream()
+        List<CalculationResult.BreakdownItem> breakdown = items == null ? java.util.Collections.emptyList() : items.stream()
                 .map(item -> {
                     BigDecimal runningWatts = item.wattage().multiply(BigDecimal.valueOf(item.quantity()));
                     BigDecimal dailyEnergy = runningWatts.multiply(item.hoursPerDay());
-                    BigDecimal surgeWatts = item.surgeApplicable()
+                    BigDecimal surgeWatts = Boolean.TRUE.equals(item.surgeApplicable())
                             ? item.wattage().multiply(item.surgeMultiplier())
                             : item.wattage();
 
