@@ -6,7 +6,9 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "saved_calculation")
+@Table(name = "saved_calculation", uniqueConstraints = {
+    @UniqueConstraint(name = "uq_saved_calculation_user_calc", columnNames = {"user_id", "calculation_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor

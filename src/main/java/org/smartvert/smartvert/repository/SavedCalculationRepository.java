@@ -14,4 +14,6 @@ public interface SavedCalculationRepository extends JpaRepository<SavedCalculati
 
     @EntityGraph(attributePaths = {"calculation", "calculation.configuration"})
     Optional<SavedCalculation> findByIdAndUserId(UUID id, UUID userId);
+
+    boolean existsByUserIdAndCalculationId(UUID userId, UUID calculationId);
 }
