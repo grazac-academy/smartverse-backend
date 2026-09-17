@@ -36,6 +36,8 @@ public class GlobalExceptionHandler {
         String msg = "A resource with the same unique identifier already exists.";
         if (ex.getMessage() != null && ex.getMessage().contains("appliance_code_key")) {
             msg = "An appliance with this code already exists.";
+        } else if (ex.getMessage() != null && ex.getMessage().contains("uq_saved_calculation_user_calc")) {
+            msg = "This calculation is already saved to your profile";
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.failure(msg));
     }
