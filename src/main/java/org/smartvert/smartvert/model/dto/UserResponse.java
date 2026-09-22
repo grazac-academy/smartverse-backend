@@ -6,6 +6,9 @@ public record UserResponse(
     UUID id,
     String email,
     String fullName,
+    String userType,
+    String state,
+    String phoneNumber,
     boolean isEmailVerified
 ) {}
 

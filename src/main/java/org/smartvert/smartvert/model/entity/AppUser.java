@@ -27,6 +27,15 @@ public class AppUser {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
+    @Column(name = "user_type", length = 100)
+    private String userType;
+
+    @Column(name = "state", length = 100)
+    private String state;
+
+    @Column(name = "phone_number", length = 50)
+    private String phoneNumber;
+
     @Builder.Default
     @Column(name = "is_email_verified", nullable = false)
     private boolean isEmailVerified = false;
