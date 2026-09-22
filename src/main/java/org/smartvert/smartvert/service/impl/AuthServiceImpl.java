@@ -47,6 +47,9 @@ public class AuthServiceImpl implements AuthService {
                 .email(request.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.password()))
                 .fullName(request.fullName().trim())
+                .userType(request.userType() != null && !request.userType().isBlank() ? request.userType().trim() : null)
+                .state(request.state() != null && !request.state().isBlank() ? request.state().trim() : null)
+                .phoneNumber(request.phoneNumber() != null && !request.phoneNumber().isBlank() ? request.phoneNumber().trim() : null)
                 .isEmailVerified(false)
                 .build();
 
@@ -95,8 +98,6 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(
                 tokenPair.accessToken(),
                 tokenPair.refreshToken(),
-                user.getEmail(),
-                user.getFullName(),
                 user.isEmailVerified()
         );
     }
