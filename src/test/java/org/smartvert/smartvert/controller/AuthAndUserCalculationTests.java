@@ -170,9 +170,105 @@ public class AuthAndUserCalculationTests {
                                 .content(loginJson))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Login successful")))
-                                .andExpect(jsonPath("$.data.email", is("john@example.com")))
                                 .andExpect(jsonPath("$.data.accessToken", notNullValue()))
-                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()));
+                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)))
+                                .andExpect(jsonPath("$.data.email").doesNotExist())
+                                .andExpect(jsonPath("$.data.fullName").doesNotExist());
+        }
+
+        @Test
+        void shouldRegisterWithOptionalDetailsAndLoginSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "sarah@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Sarah Conner",
+                                    "userType": "Homeowner / Renter",
+                                    "state": "Lagos",
+                                    "phoneNumber": "08012345678"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Registration successful")));
+
+                AppUser user = appUserRepository.findByEmail("sarah@example.com").orElseThrow();
+                org.junit.jupiter.api.Assertions.assertEquals("Homeowner / Renter", user.getUserType());
+                org.junit.jupiter.api.Assertions.assertEquals("Lagos", user.getState());
+                org.junit.jupiter.api.Assertions.assertEquals("08012345678", user.getPhoneNumber());
+
+                String loginJson = """
+                                {
+                                    "email": "sarah@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Login successful")))
+                                .andExpect(jsonPath("$.data.accessToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)))
+                                .andExpect(jsonPath("$.data.email").doesNotExist());
+        }
+
+        @Test
+        void shouldFetchUserProfileSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "profile.user@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Profile User",
+                                    "userType": "Solar Installer / Technician",
+                                    "state": "Abuja",
+                                    "phoneNumber": "09087654321"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk());
+
+                String loginJson = """
+                                {
+                                    "email": "profile.user@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andReturn();
+
+                JsonNode loginNode = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+                String accessToken = loginNode.get("data").get("accessToken").asText();
+
+                // Test unauthenticated request
+                mockMvc.perform(get("/api/v1/user/profile"))
+                                .andExpect(status().isUnauthorized());
+
+                // Test authenticated profile fetch
+                mockMvc.perform(get("/api/v1/user/profile")
+                                .header("Authorization", "Bearer " + accessToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("User profile retrieved")))
+                                .andExpect(jsonPath("$.data.id", notNullValue()))
+                                .andExpect(jsonPath("$.data.email", is("profile.user@example.com")))
+                                .andExpect(jsonPath("$.data.fullName", is("Profile User")))
+                                .andExpect(jsonPath("$.data.userType", is("Solar Installer / Technician")))
+                                .andExpect(jsonPath("$.data.state", is("Abuja")))
+                                .andExpect(jsonPath("$.data.phoneNumber", is("09087654321")))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)));
         }
 
         @Test
@@ -375,28 +471,54 @@ public class AuthAndUserCalculationTests {
                 UserToken token = userTokenRepository.findTopByUserAndTokenTypeOrderByCreatedAtDesc(
                                 user, UserToken.TokenType.EMAIL_VERIFICATION).orElseThrow();
 
-                // Verify with token via GET (browser click)
-                mockMvc.perform(get("/api/v1/auth/verify-email")
-                                .param("token", token.getToken()))
+                // 1. Verify with wrong email + correct OTP -> fail
+                String wrongEmailJson = """
+                                {
+                                    "email": "wrong@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(token.getToken());
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongEmailJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 2. Verify with correct email + wrong OTP -> fail
+                String wrongOtpJson = """
+                                {
+                                    "email": "verify.me@example.com",
+                                    "otp": "999999"
+                                }
+                                """;
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongOtpJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 3. Verify with correct email + correct OTP -> success
+                String validVerifyJson = """
+                                {
+                                    "email": "verify.me@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(token.getToken());
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validVerifyJson))
                                 .andExpect(status().isOk())
-                                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                                .andExpect(content().string(containsString("Email Verified Successfully")));
+                                .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
                 AppUser updated = appUserRepository.findByEmail("verify.me@example.com").orElseThrow();
                 org.junit.jupiter.api.Assertions.assertTrue(updated.isEmailVerified());
 
-                // Verify token cannot be reused via POST (API client)
+                // 4. Verify token cannot be reused -> fail
                 mockMvc.perform(post("/api/v1/auth/verify-email")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"token\":\"" + token.getToken() + "\"}"))
+                                .content(validVerifyJson))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
-
-                // Verify invalid token via GET (browser click) returns clean error HTML
-                mockMvc.perform(get("/api/v1/auth/verify-email")
-                                .param("token", "non-existent-token"))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(content().string(containsString("Verification Failed")));
         }
 
         @Test
@@ -433,18 +555,26 @@ public class AuthAndUserCalculationTests {
                 UserToken resetToken = userTokenRepository.findTopByUserAndTokenTypeOrderByCreatedAtDesc(
                                 user, UserToken.TokenType.PASSWORD_RESET).orElseThrow();
 
-                // 3. Verify GET reset-password page loads for browser
-                mockMvc.perform(get("/api/v1/auth/reset-password")
-                                .param("token", resetToken.getToken()))
-                                .andExpect(status().isOk())
-                                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                                .andExpect(content().string(containsString("Reset Your Password")))
-                                .andExpect(content().string(containsString(resetToken.getToken())));
+                // 3. Reset password with wrong email -> fail
+                String wrongEmailResetJson = """
+                                {
+                                    "email": "wrong@example.com",
+                                    "otp": "%s",
+                                    "newPassword": "NewPassword123!"
+                                }
+                                """.formatted(resetToken.getToken());
 
-                // 4. Reset password via POST
+                mockMvc.perform(post("/api/v1/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongEmailResetJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 4. Reset password with correct email and OTP
                 String resetJson = """
                                 {
-                                    "token": "%s",
+                                    "email": "reset.user@example.com",
+                                    "otp": "%s",
                                     "newPassword": "NewPassword123!"
                                 }
                                 """.formatted(resetToken.getToken());
@@ -455,7 +585,7 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Password reset successfully")));
 
-                // 4. Old password should fail
+                // 5. Old password should fail
                 String oldLoginJson = """
                                 {
                                     "email": "reset.user@example.com",
@@ -468,7 +598,7 @@ public class AuthAndUserCalculationTests {
                                 .content(oldLoginJson))
                                 .andExpect(status().isUnauthorized());
 
-                // 5. New password should succeed
+                // 6. New password should succeed
                 String newLoginJson = """
                                 {
                                     "email": "reset.user@example.com",
@@ -512,9 +642,16 @@ public class AuthAndUserCalculationTests {
                 org.junit.jupiter.api.Assertions.assertEquals(6, otpToken.getToken().length());
 
                 // 3. Verify email with 6-digit OTP via API
+                String verifyOtpJson = """
+                                {
+                                    "email": "otp.user@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(otpToken.getToken());
+
                 mockMvc.perform(post("/api/v1/auth/verify-email")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"token\":\"" + otpToken.getToken() + "\"}"))
+                                .content(verifyOtpJson))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
@@ -538,7 +675,8 @@ public class AuthAndUserCalculationTests {
                 // 6. Reset password using 6-digit OTP
                 String resetJson = """
                                 {
-                                    "token": "%s",
+                                    "email": "otp.user@example.com",
+                                    "otp": "%s",
                                     "newPassword": "BrandNewPassword123!"
                                 }
                                 """.formatted(resetOtpToken.getToken());

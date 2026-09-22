@@ -41,18 +41,18 @@ public class BrevoEmailServiceImpl extends AbstractEmailService {
 
     @Override
     @Async
-    public void sendVerificationEmail(String toEmail, String fullName, String otpCode, String verificationUrl) {
+    public void sendVerificationEmail(String toEmail, String fullName, String otpCode) {
         String subject = "Verify your email address - SmartVert";
-        String htmlContent = buildVerificationEmailTemplate(fullName, otpCode, verificationUrl);
-        sendBrevoEmail(toEmail, fullName, subject, htmlContent, verificationUrl);
+        String htmlContent = buildVerificationEmailTemplate(fullName, otpCode);
+        sendBrevoEmail(toEmail, fullName, subject, htmlContent, "OTP: " + otpCode);
     }
 
     @Override
     @Async
-    public void sendPasswordResetEmail(String toEmail, String fullName, String otpCode, String resetUrl) {
+    public void sendPasswordResetEmail(String toEmail, String fullName, String otpCode) {
         String subject = "Reset your password - SmartVert";
-        String htmlContent = buildPasswordResetEmailTemplate(fullName, otpCode, resetUrl);
-        sendBrevoEmail(toEmail, fullName, subject, htmlContent, resetUrl);
+        String htmlContent = buildPasswordResetEmailTemplate(fullName, otpCode);
+        sendBrevoEmail(toEmail, fullName, subject, htmlContent, "OTP: " + otpCode);
     }
 
     private void sendBrevoEmail(String toEmail, String recipientName, String subject, String htmlContent, String actionUrl) {

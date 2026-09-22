@@ -13,6 +13,8 @@ public interface UserTokenRepository extends JpaRepository<UserToken, UUID> {
 
     Optional<UserToken> findByTokenAndTokenType(String token, UserToken.TokenType tokenType);
 
+    Optional<UserToken> findByUserAndTokenAndTokenType(AppUser user, String token, UserToken.TokenType tokenType);
+
     Optional<UserToken> findTopByUserAndTokenTypeOrderByCreatedAtDesc(AppUser user, UserToken.TokenType tokenType);
 
     void deleteByUser(AppUser user);

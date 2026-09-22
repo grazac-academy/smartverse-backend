@@ -8,11 +8,11 @@ public interface AuthService {
 
     AuthResponse login(LoginRequest request);
 
-    void verifyEmail(String token);
+    void verifyEmail(VerifyEmailRequest request);
 
     void resendVerificationEmail(String email);
 
     void forgotPassword(String email);
 
-    void resetPassword(String token, String newPassword);
+    void resetPassword(ResetPasswordRequest request);
 }
