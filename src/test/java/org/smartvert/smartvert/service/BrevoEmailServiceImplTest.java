@@ -27,8 +27,7 @@ class BrevoEmailServiceImplTest {
         assertDoesNotThrow(() -> emailService.sendVerificationEmail(
                 "user@example.com",
                 "Jane Doe",
-                "123456",
-                "https://smartvert.org/verify?token=xyz"
+                "123456"
         ));
     }
 
@@ -39,8 +38,7 @@ class BrevoEmailServiceImplTest {
         assertDoesNotThrow(() -> emailService.sendPasswordResetEmail(
                 "user@example.com",
                 "Jane Doe",
-                "654321",
-                "https://smartvert.org/reset?token=xyz"
+                "654321"
         ));
     }
 
@@ -51,8 +49,7 @@ class BrevoEmailServiceImplTest {
         assertDoesNotThrow(() -> emailService.sendVerificationEmail(
                 "user@example.com",
                 "Jane Doe",
-                "123456",
-                "https://smartvert.org/verify?token=xyz"
+                "123456"
         ));
     }
 }

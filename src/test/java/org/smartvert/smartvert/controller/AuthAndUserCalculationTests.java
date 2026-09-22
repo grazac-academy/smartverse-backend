@@ -471,28 +471,54 @@ public class AuthAndUserCalculationTests {
                 UserToken token = userTokenRepository.findTopByUserAndTokenTypeOrderByCreatedAtDesc(
                                 user, UserToken.TokenType.EMAIL_VERIFICATION).orElseThrow();
 
-                // Verify with token via GET (browser click)
-                mockMvc.perform(get("/api/v1/auth/verify-email")
-                                .param("token", token.getToken()))
+                // 1. Verify with wrong email + correct OTP -> fail
+                String wrongEmailJson = """
+                                {
+                                    "email": "wrong@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(token.getToken());
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongEmailJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 2. Verify with correct email + wrong OTP -> fail
+                String wrongOtpJson = """
+                                {
+                                    "email": "verify.me@example.com",
+                                    "otp": "999999"
+                                }
+                                """;
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongOtpJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 3. Verify with correct email + correct OTP -> success
+                String validVerifyJson = """
+                                {
+                                    "email": "verify.me@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(token.getToken());
+                mockMvc.perform(post("/api/v1/auth/verify-email")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(validVerifyJson))
                                 .andExpect(status().isOk())
-                                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                                .andExpect(content().string(containsString("Email Verified Successfully")));
+                                .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
                 AppUser updated = appUserRepository.findByEmail("verify.me@example.com").orElseThrow();
                 org.junit.jupiter.api.Assertions.assertTrue(updated.isEmailVerified());
 
-                // Verify token cannot be reused via POST (API client)
+                // 4. Verify token cannot be reused -> fail
                 mockMvc.perform(post("/api/v1/auth/verify-email")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"token\":\"" + token.getToken() + "\"}"))
+                                .content(validVerifyJson))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
-
-                // Verify invalid token via GET (browser click) returns clean error HTML
-                mockMvc.perform(get("/api/v1/auth/verify-email")
-                                .param("token", "non-existent-token"))
-                                .andExpect(status().isBadRequest())
-                                .andExpect(content().string(containsString("Verification Failed")));
         }
 
         @Test
@@ -529,18 +555,26 @@ public class AuthAndUserCalculationTests {
                 UserToken resetToken = userTokenRepository.findTopByUserAndTokenTypeOrderByCreatedAtDesc(
                                 user, UserToken.TokenType.PASSWORD_RESET).orElseThrow();
 
-                // 3. Verify GET reset-password page loads for browser
-                mockMvc.perform(get("/api/v1/auth/reset-password")
-                                .param("token", resetToken.getToken()))
-                                .andExpect(status().isOk())
-                                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-                                .andExpect(content().string(containsString("Reset Your Password")))
-                                .andExpect(content().string(containsString(resetToken.getToken())));
+                // 3. Reset password with wrong email -> fail
+                String wrongEmailResetJson = """
+                                {
+                                    "email": "wrong@example.com",
+                                    "otp": "%s",
+                                    "newPassword": "NewPassword123!"
+                                }
+                                """.formatted(resetToken.getToken());
 
-                // 4. Reset password via POST
+                mockMvc.perform(post("/api/v1/auth/reset-password")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(wrongEmailResetJson))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.message", containsString("Invalid or expired")));
+
+                // 4. Reset password with correct email and OTP
                 String resetJson = """
                                 {
-                                    "token": "%s",
+                                    "email": "reset.user@example.com",
+                                    "otp": "%s",
                                     "newPassword": "NewPassword123!"
                                 }
                                 """.formatted(resetToken.getToken());
@@ -551,7 +585,7 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Password reset successfully")));
 
-                // 4. Old password should fail
+                // 5. Old password should fail
                 String oldLoginJson = """
                                 {
                                     "email": "reset.user@example.com",
@@ -564,7 +598,7 @@ public class AuthAndUserCalculationTests {
                                 .content(oldLoginJson))
                                 .andExpect(status().isUnauthorized());
 
-                // 5. New password should succeed
+                // 6. New password should succeed
                 String newLoginJson = """
                                 {
                                     "email": "reset.user@example.com",
@@ -608,9 +642,16 @@ public class AuthAndUserCalculationTests {
                 org.junit.jupiter.api.Assertions.assertEquals(6, otpToken.getToken().length());
 
                 // 3. Verify email with 6-digit OTP via API
+                String verifyOtpJson = """
+                                {
+                                    "email": "otp.user@example.com",
+                                    "otp": "%s"
+                                }
+                                """.formatted(otpToken.getToken());
+
                 mockMvc.perform(post("/api/v1/auth/verify-email")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"token\":\"" + otpToken.getToken() + "\"}"))
+                                .content(verifyOtpJson))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
@@ -634,7 +675,8 @@ public class AuthAndUserCalculationTests {
                 // 6. Reset password using 6-digit OTP
                 String resetJson = """
                                 {
-                                    "token": "%s",
+                                    "email": "otp.user@example.com",
+                                    "otp": "%s",
                                     "newPassword": "BrandNewPassword123!"
                                 }
                                 """.formatted(resetOtpToken.getToken());
