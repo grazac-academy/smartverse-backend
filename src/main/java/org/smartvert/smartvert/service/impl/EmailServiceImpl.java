@@ -28,18 +28,18 @@ public class EmailServiceImpl extends AbstractEmailService {
 
     @Override
     @Async
-    public void sendVerificationEmail(String toEmail, String fullName, String otpCode, String verificationUrl) {
+    public void sendVerificationEmail(String toEmail, String fullName, String otpCode) {
         String subject = "Verify your email address - SmartVert";
-        String htmlContent = buildVerificationEmailTemplate(fullName, otpCode, verificationUrl);
-        sendHtmlEmail(toEmail, subject, htmlContent, verificationUrl);
+        String htmlContent = buildVerificationEmailTemplate(fullName, otpCode);
+        sendHtmlEmail(toEmail, subject, htmlContent, "OTP: " + otpCode);
     }
 
     @Override
     @Async
-    public void sendPasswordResetEmail(String toEmail, String fullName, String otpCode, String resetUrl) {
+    public void sendPasswordResetEmail(String toEmail, String fullName, String otpCode) {
         String subject = "Reset your password - SmartVert";
-        String htmlContent = buildPasswordResetEmailTemplate(fullName, otpCode, resetUrl);
-        sendHtmlEmail(toEmail, subject, htmlContent, resetUrl);
+        String htmlContent = buildPasswordResetEmailTemplate(fullName, otpCode);
+        sendHtmlEmail(toEmail, subject, htmlContent, "OTP: " + otpCode);
     }
 
     private void sendHtmlEmail(String toEmail, String subject, String htmlContent, String actionUrl) {

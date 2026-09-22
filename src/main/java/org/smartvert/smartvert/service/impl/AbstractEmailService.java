@@ -10,18 +10,16 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public abstract class AbstractEmailService implements EmailService {
 
-    protected String buildVerificationEmailTemplate(String fullName, String otpCode, String verificationUrl) {
+    protected String buildVerificationEmailTemplate(String fullName, String otpCode) {
         String template = loadTemplate("email-verification.html");
         return template.replace("{{fullName}}", escapeHtml(fullName))
-                .replace("{{otpCode}}", escapeHtml(otpCode))
-                .replace("{{verificationUrl}}", verificationUrl != null ? verificationUrl : "");
+                .replace("{{otpCode}}", escapeHtml(otpCode));
     }
 
-    protected String buildPasswordResetEmailTemplate(String fullName, String otpCode, String resetUrl) {
+    protected String buildPasswordResetEmailTemplate(String fullName, String otpCode) {
         String template = loadTemplate("password-reset.html");
         return template.replace("{{fullName}}", escapeHtml(fullName))
-                .replace("{{otpCode}}", escapeHtml(otpCode))
-                .replace("{{resetUrl}}", resetUrl != null ? resetUrl : "");
+                .replace("{{otpCode}}", escapeHtml(otpCode));
     }
 
     protected String loadTemplate(String templateName) {

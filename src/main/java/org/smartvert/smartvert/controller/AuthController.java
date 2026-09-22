@@ -8,10 +8,6 @@ import org.smartvert.smartvert.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -37,20 +33,8 @@ public class AuthController {
     @PostMapping("/verify-email")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(
             @Valid @RequestBody VerifyEmailRequest request) {
-        authService.verifyEmail(request.token());
+        authService.verifyEmail(request);
         return ResponseEntity.ok(ApiResponse.success("Email verified successfully", null));
-    }
-
-    @GetMapping(value = "/verify-email", produces = "text/html;charset=UTF-8")
-    public ResponseEntity<String> verifyEmailByParam(@RequestParam("token") String token) {
-        try {
-            authService.verifyEmail(token);
-            String html = loadTemplate("verification-success.html");
-            return ResponseEntity.ok(html);
-        } catch (Exception ex) {
-            String html = loadTemplate("verification-error.html");
-            return ResponseEntity.badRequest().body(html);
-        }
     }
 
     @PostMapping("/resend-verification")
@@ -71,39 +55,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request.token(), request.newPassword());
+        authService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success("Password reset successfully", null));
-    }
-
-    @GetMapping(value = "/reset-password", produces = "text/html;charset=UTF-8")
-    public ResponseEntity<String> showResetPasswordPage(@RequestParam("token") String token) {
-        String template = loadTemplate("reset-password-form.html");
-        if (template.isEmpty()) {
-            return ResponseEntity.badRequest().body("Reset password page not available.");
-        }
-        String html = template.replace("{{token}}", escapeHtml(token));
-        return ResponseEntity.ok(html);
-    }
-
-    private String loadTemplate(String templateName) {
-        try (InputStream is = getClass().getResourceAsStream("/templates/" + templateName)) {
-            if (is == null) {
-                log.warn("Template /templates/{} not found on classpath", templateName);
-                return "";
-            }
-            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.error("Error reading template /templates/{}", templateName, e);
-            return "";
-        }
-    }
-
-    private String escapeHtml(String input) {
-        if (input == null) return "";
-        return input.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
     }
 }
