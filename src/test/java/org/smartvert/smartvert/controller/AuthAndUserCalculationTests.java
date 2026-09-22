@@ -170,9 +170,105 @@ public class AuthAndUserCalculationTests {
                                 .content(loginJson))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.message", is("Login successful")))
-                                .andExpect(jsonPath("$.data.email", is("john@example.com")))
                                 .andExpect(jsonPath("$.data.accessToken", notNullValue()))
-                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()));
+                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)))
+                                .andExpect(jsonPath("$.data.email").doesNotExist())
+                                .andExpect(jsonPath("$.data.fullName").doesNotExist());
+        }
+
+        @Test
+        void shouldRegisterWithOptionalDetailsAndLoginSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "sarah@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Sarah Conner",
+                                    "userType": "Homeowner / Renter",
+                                    "state": "Lagos",
+                                    "phoneNumber": "08012345678"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Registration successful")));
+
+                AppUser user = appUserRepository.findByEmail("sarah@example.com").orElseThrow();
+                org.junit.jupiter.api.Assertions.assertEquals("Homeowner / Renter", user.getUserType());
+                org.junit.jupiter.api.Assertions.assertEquals("Lagos", user.getState());
+                org.junit.jupiter.api.Assertions.assertEquals("08012345678", user.getPhoneNumber());
+
+                String loginJson = """
+                                {
+                                    "email": "sarah@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Login successful")))
+                                .andExpect(jsonPath("$.data.accessToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.refreshToken", notNullValue()))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)))
+                                .andExpect(jsonPath("$.data.email").doesNotExist());
+        }
+
+        @Test
+        void shouldFetchUserProfileSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "profile.user@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Profile User",
+                                    "userType": "Solar Installer / Technician",
+                                    "state": "Abuja",
+                                    "phoneNumber": "09087654321"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk());
+
+                String loginJson = """
+                                {
+                                    "email": "profile.user@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andReturn();
+
+                JsonNode loginNode = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+                String accessToken = loginNode.get("data").get("accessToken").asText();
+
+                // Test unauthenticated request
+                mockMvc.perform(get("/api/v1/user/profile"))
+                                .andExpect(status().isUnauthorized());
+
+                // Test authenticated profile fetch
+                mockMvc.perform(get("/api/v1/user/profile")
+                                .header("Authorization", "Bearer " + accessToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("User profile retrieved")))
+                                .andExpect(jsonPath("$.data.id", notNullValue()))
+                                .andExpect(jsonPath("$.data.email", is("profile.user@example.com")))
+                                .andExpect(jsonPath("$.data.fullName", is("Profile User")))
+                                .andExpect(jsonPath("$.data.userType", is("Solar Installer / Technician")))
+                                .andExpect(jsonPath("$.data.state", is("Abuja")))
+                                .andExpect(jsonPath("$.data.phoneNumber", is("09087654321")))
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)));
         }
 
         @Test
