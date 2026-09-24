@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.smartvert.smartvert.model.dto.ApiResponse;
 import org.smartvert.smartvert.model.dto.ApplianceCategoryDTO;
 import org.smartvert.smartvert.model.dto.ApplianceDTO;
+import org.smartvert.smartvert.model.dto.ApplianceFilter;
 import org.smartvert.smartvert.service.ApplianceService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,13 @@ public class ApplianceController {
     public ResponseEntity<ApiResponse<List<ApplianceDTO>>> getAppliances(
             @RequestParam(value = "categoryId", required = false) UUID categoryId) {
         List<ApplianceDTO> appliances = applianceService.getAppliances(categoryId);
+        return ResponseEntity.ok(ApiResponse.success("Appliances retrieved successfully", appliances));
+    }
+
+    @GetMapping("/appliances/search")
+    public ResponseEntity<ApiResponse<List<ApplianceDTO>>> searchAppliances(
+            @ModelAttribute ApplianceFilter filter) {
+        List<ApplianceDTO> appliances = applianceService.searchAppliances(filter);
         return ResponseEntity.ok(ApiResponse.success("Appliances retrieved successfully", appliances));
     }
 

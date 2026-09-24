@@ -5,12 +5,15 @@ import org.smartvert.smartvert.exception.ResourceNotFoundException;
 import org.smartvert.smartvert.mapper.ApplianceMapper;
 import org.smartvert.smartvert.model.dto.ApplianceCategoryDTO;
 import org.smartvert.smartvert.model.dto.ApplianceDTO;
+import org.smartvert.smartvert.model.dto.ApplianceFilter;
 import org.smartvert.smartvert.model.entity.Appliance;
 import org.smartvert.smartvert.model.entity.ApplianceCategory;
 import org.smartvert.smartvert.repository.ApplianceCategoryRepository;
 import org.smartvert.smartvert.repository.ApplianceRepository;
 import org.smartvert.smartvert.service.ApplianceService;
 import org.smartvert.smartvert.service.FileStorageService;
+import org.smartvert.smartvert.specification.ApplianceSpecification;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,6 +48,14 @@ public class ApplianceServiceImpl implements ApplianceService {
             list = applianceRepository.findByActiveTrue();
         }
         return list.stream()
+                .map(mapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ApplianceDTO> searchAppliances(ApplianceFilter filter) {
+        Specification<Appliance> spec = ApplianceSpecification.filter(filter);
+        return applianceRepository.findAll(spec).stream()
                 .map(mapper::toDTO)
                 .collect(Collectors.toList());
     }
