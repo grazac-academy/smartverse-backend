@@ -5,6 +5,7 @@ import org.smartvert.smartvert.model.dto.ApiResponse;
 import org.smartvert.smartvert.model.dto.UserResponse;
 import org.smartvert.smartvert.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,5 +21,11 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getProfile() {
         UserResponse response = userService.getProfile();
         return ResponseEntity.ok(ApiResponse.success("User profile retrieved", response));
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount() {
+        userService.deleteAccount();
+        return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
     }
 }
