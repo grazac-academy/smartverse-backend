@@ -4,6 +4,7 @@ import org.smartvert.smartvert.model.dto.CalculationResult;
 import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -52,7 +53,7 @@ public class RecommendationAssembler {
                 solar
         );
 
-        List<CalculationResult.BreakdownItem> breakdown = items == null ? java.util.Collections.emptyList() : items.stream()
+        List<CalculationResult.BreakdownItem> breakdown = items == null ? Collections.emptyList() : items.stream()
                 .map(item -> {
                     BigDecimal runningWatts = item.wattage().multiply(BigDecimal.valueOf(item.quantity()));
                     BigDecimal dailyEnergy = runningWatts.multiply(item.hoursPerDay());

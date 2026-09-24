@@ -11,7 +11,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-@Service("smtpEmailService")
+@Service
 @ConditionalOnProperty(name = "app.mail.provider", havingValue = "smtp")
 @Slf4j
 @RequiredArgsConstructor

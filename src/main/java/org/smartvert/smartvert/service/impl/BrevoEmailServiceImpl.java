@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Service("brevoEmailService")
+@Service
 @Primary
 @ConditionalOnProperty(name = "app.mail.provider", havingValue = "brevo", matchIfMissing = true)
 @Slf4j
