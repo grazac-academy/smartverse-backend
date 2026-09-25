@@ -2,6 +2,7 @@ package org.smartvert.smartvert.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.smartvert.smartvert.exception.ResourceNotFoundException;
+import org.smartvert.smartvert.model.dto.UpdateProfileRequest;
 import org.smartvert.smartvert.model.dto.UserResponse;
 import org.smartvert.smartvert.model.entity.AppUser;
 import org.smartvert.smartvert.repository.AppUserRepository;
@@ -24,7 +25,26 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getProfile() {
         AppUser user = getCurrentAuthenticatedUser();
+        return mapToUserResponse(user);
+    }
 
+    @Override
+    @Transactional
+    public UserResponse updateProfile(UpdateProfileRequest request) {
+        AppUser user = getCurrentAuthenticatedUser();
+
+        if (request.fullName() != null && !request.fullName().isBlank()) {
+            user.setFullName(request.fullName().trim());
+        }
+        if (request.phoneNumber() != null) {
+            user.setPhoneNumber(request.phoneNumber().trim());
+        }
+
+        AppUser updated = appUserRepository.save(user);
+        return mapToUserResponse(updated);
+    }
+
+    private UserResponse mapToUserResponse(AppUser user) {
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -32,7 +52,8 @@ public class UserServiceImpl implements UserService {
                 user.getUserType(),
                 user.getState(),
                 user.getPhoneNumber(),
-                user.isEmailVerified()
+                user.isEmailVerified(),
+                user.getCreatedAt()
         );
     }
 

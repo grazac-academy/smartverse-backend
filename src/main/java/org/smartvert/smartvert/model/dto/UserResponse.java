@@ -1,5 +1,6 @@
 package org.smartvert.smartvert.model.dto;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record UserResponse(
@@ -9,6 +10,8 @@ public record UserResponse(
     String userType,
     String state,
     String phoneNumber,
-    boolean isEmailVerified
+    boolean isEmailVerified,
+    OffsetDateTime createdAt
 ) {}
+
 

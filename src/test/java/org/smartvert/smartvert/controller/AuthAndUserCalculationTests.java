@@ -269,7 +269,77 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(jsonPath("$.data.userType", is("Solar Installer / Technician")))
                                 .andExpect(jsonPath("$.data.state", is("Abuja")))
                                 .andExpect(jsonPath("$.data.phoneNumber", is("09087654321")))
-                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)));
+                                .andExpect(jsonPath("$.data.isEmailVerified", is(false)))
+                                .andExpect(jsonPath("$.data.createdAt", notNullValue()));
+        }
+
+        @Test
+        void shouldUpdateUserProfileSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "update.profile@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Original Name",
+                                    "userType": "Home Owner",
+                                    "state": "Lagos",
+                                    "phoneNumber": "08011112222"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk());
+
+                String loginJson = """
+                                {
+                                    "email": "update.profile@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andReturn();
+
+                JsonNode loginNode = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+                String accessToken = loginNode.get("data").get("accessToken").asText();
+
+                // Test unauthenticated PATCH
+                mockMvc.perform(patch("/api/v1/user/profile")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"fullName\": \"New Name\"}"))
+                                .andExpect(status().isUnauthorized());
+
+                // Test authenticated PATCH update of name and phone
+                String updateJson = """
+                                {
+                                    "fullName": "Updated Name",
+                                    "phoneNumber": "08099998888"
+                                }
+                                """;
+
+                mockMvc.perform(patch("/api/v1/user/profile")
+                                .header("Authorization", "Bearer " + accessToken)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(updateJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("User profile updated successfully")))
+                                .andExpect(jsonPath("$.data.email", is("update.profile@example.com")))
+                                .andExpect(jsonPath("$.data.fullName", is("Updated Name")))
+                                .andExpect(jsonPath("$.data.phoneNumber", is("08099998888")))
+                                .andExpect(jsonPath("$.data.userType", is("Home Owner")))
+                                .andExpect(jsonPath("$.data.state", is("Lagos")))
+                                .andExpect(jsonPath("$.data.createdAt", notNullValue()));
+
+                // Verify updated profile persists on GET
+                mockMvc.perform(get("/api/v1/user/profile")
+                                .header("Authorization", "Bearer " + accessToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.data.fullName", is("Updated Name")))
+                                .andExpect(jsonPath("$.data.phoneNumber", is("08099998888")));
         }
 
         @Test
