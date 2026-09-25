@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -197,9 +198,9 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(jsonPath("$.message", is("Registration successful")));
 
                 AppUser user = appUserRepository.findByEmail("sarah@example.com").orElseThrow();
-                org.junit.jupiter.api.Assertions.assertEquals("Homeowner / Renter", user.getUserType());
-                org.junit.jupiter.api.Assertions.assertEquals("Lagos", user.getState());
-                org.junit.jupiter.api.Assertions.assertEquals("08012345678", user.getPhoneNumber());
+                assertEquals("Homeowner / Renter", user.getUserType());
+                assertEquals("Lagos", user.getState());
+                assertEquals("08012345678", user.getPhoneNumber());
 
                 String loginJson = """
                                 {
@@ -269,6 +270,95 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(jsonPath("$.data.state", is("Abuja")))
                                 .andExpect(jsonPath("$.data.phoneNumber", is("09087654321")))
                                 .andExpect(jsonPath("$.data.isEmailVerified", is(false)));
+        }
+
+        @Test
+        void shouldDeleteAccountSuccessfully() throws Exception {
+                String registerJson = """
+                                {
+                                    "email": "delete.me@example.com",
+                                    "password": "Password123!",
+                                    "fullName": "Delete Me",
+                                    "userType": "Home Owner",
+                                    "state": "Lagos",
+                                    "phoneNumber": "08011223344"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(registerJson))
+                                .andExpect(status().isOk());
+
+                String loginJson = """
+                                {
+                                    "email": "delete.me@example.com",
+                                    "password": "Password123!"
+                                }
+                                """;
+
+                MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isOk())
+                                .andReturn();
+
+                JsonNode loginNode = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+                String accessToken = loginNode.get("data").get("accessToken").asText();
+
+                // Test unauthenticated delete request
+                mockMvc.perform(delete("/api/v1/user/delete"))
+                                .andExpect(status().isUnauthorized());
+
+                // Test authenticated delete request
+                mockMvc.perform(delete("/api/v1/user/delete")
+                                .header("Authorization", "Bearer " + accessToken))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Account deleted successfully")));
+
+                // Subsequent request with the same token should now be Unauthorized (401)
+                mockMvc.perform(get("/api/v1/user/profile")
+                                .header("Authorization", "Bearer " + accessToken))
+                                .andExpect(status().isUnauthorized());
+
+                // Verify user is soft-deleted in the repository (record still exists, but deleted=true and deletedAt is set)
+                AppUser softDeletedUser = appUserRepository.findByEmail("delete.me@example.com").orElse(null);
+                assertNotNull(softDeletedUser);
+                assertTrue(softDeletedUser.isDeleted());
+                assertNotNull(softDeletedUser.getDeletedAt());
+                assertTrue(
+                                appUserRepository.findByEmailAndDeletedFalse("delete.me@example.com").isEmpty());
+
+                // Login should fail for soft-deleted user
+                mockMvc.perform(post("/api/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(loginJson))
+                                .andExpect(status().isUnauthorized());
+
+                // Re-registering with the same email should succeed and reactivate the account
+                String reRegisterJson = """
+                                {
+                                    "email": "delete.me@example.com",
+                                    "password": "NewPassword123!",
+                                    "fullName": "Reactivated User",
+                                    "userType": "Home Owner",
+                                    "state": "Oyo",
+                                    "phoneNumber": "08099887766"
+                                }
+                                """;
+
+                mockMvc.perform(post("/api/v1/auth/register")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(reRegisterJson))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message", is("Registration successful")));
+
+                // User should now be active again in the database
+                AppUser reactivatedUser = appUserRepository.findByEmailAndDeletedFalse("delete.me@example.com").orElse(null);
+                assertNotNull(reactivatedUser);
+                assertFalse(reactivatedUser.isDeleted());
+                assertEquals("Reactivated User", reactivatedUser.getFullName());
+                assertEquals("Oyo", reactivatedUser.getState());
         }
 
         @Test
@@ -511,7 +601,7 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
                 AppUser updated = appUserRepository.findByEmail("verify.me@example.com").orElseThrow();
-                org.junit.jupiter.api.Assertions.assertTrue(updated.isEmailVerified());
+                assertTrue(updated.isEmailVerified());
 
                 // 4. Verify token cannot be reused -> fail
                 mockMvc.perform(post("/api/v1/auth/verify-email")
@@ -639,7 +729,7 @@ public class AuthAndUserCalculationTests {
                                 .findFirst()
                                 .orElseThrow();
 
-                org.junit.jupiter.api.Assertions.assertEquals(6, otpToken.getToken().length());
+                assertEquals(6, otpToken.getToken().length());
 
                 // 3. Verify email with 6-digit OTP via API
                 String verifyOtpJson = """
@@ -656,7 +746,7 @@ public class AuthAndUserCalculationTests {
                                 .andExpect(jsonPath("$.message", is("Email verified successfully")));
 
                 AppUser verifiedUser = appUserRepository.findByEmail("otp.user@example.com").orElseThrow();
-                org.junit.jupiter.api.Assertions.assertTrue(verifiedUser.isEmailVerified());
+                assertTrue(verifiedUser.isEmailVerified());
 
                 // 4. Request password reset
                 mockMvc.perform(post("/api/v1/auth/forgot-password")

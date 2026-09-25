@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,19 +35,36 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void register(RegisterRequest request) {
-        if (appUserRepository.existsByEmail(request.email())) {
-            throw new DuplicateResourceException("An account with this email already exists");
-        }
+        String normalizedEmail = request.email().toLowerCase().trim();
+        Optional<AppUser> existingUserOpt = appUserRepository.findByEmail(normalizedEmail);
 
-        AppUser user = AppUser.builder()
-                .email(request.email().toLowerCase().trim())
-                .password(passwordEncoder.encode(request.password()))
-                .fullName(request.fullName().trim())
-                .userType(request.userType() != null && !request.userType().isBlank() ? request.userType().trim() : null)
-                .state(request.state() != null && !request.state().isBlank() ? request.state().trim() : null)
-                .phoneNumber(request.phoneNumber() != null && !request.phoneNumber().isBlank() ? request.phoneNumber().trim() : null)
-                .isEmailVerified(false)
-                .build();
+        AppUser user;
+        if (existingUserOpt.isPresent()) {
+            user = existingUserOpt.get();
+            if (!user.isDeleted()) {
+                throw new DuplicateResourceException("An account with this email already exists");
+            }
+            user.setPassword(passwordEncoder.encode(request.password()));
+            user.setFullName(request.fullName().trim());
+            user.setUserType(request.userType() != null && !request.userType().isBlank() ? request.userType().trim() : null);
+            user.setState(request.state() != null && !request.state().isBlank() ? request.state().trim() : null);
+            user.setPhoneNumber(request.phoneNumber() != null && !request.phoneNumber().isBlank() ? request.phoneNumber().trim() : null);
+            user.setEmailVerified(false);
+            user.setDeleted(false);
+            user.setDeletedAt(null);
+            userTokenRepository.deleteByUser(user);
+        } else {
+            user = AppUser.builder()
+                    .email(normalizedEmail)
+                    .password(passwordEncoder.encode(request.password()))
+                    .fullName(request.fullName().trim())
+                    .userType(request.userType() != null && !request.userType().isBlank() ? request.userType().trim() : null)
+                    .state(request.state() != null && !request.state().isBlank() ? request.state().trim() : null)
+                    .phoneNumber(request.phoneNumber() != null && !request.phoneNumber().isBlank() ? request.phoneNumber().trim() : null)
+                    .isEmailVerified(false)
+                    .deleted(false)
+                    .build();
+        }
 
         AppUser saved = appUserRepository.save(user);
 
@@ -75,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
-        AppUser user = appUserRepository.findByEmail(request.email().toLowerCase().trim())
+        AppUser user = appUserRepository.findByEmailAndDeletedFalse(request.email().toLowerCase().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         var tokenPair = jwtTokenProvider.generateTokenPair(auth);
@@ -90,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
-        AppUser user = appUserRepository.findByEmail(request.email().toLowerCase().trim())
+        AppUser user = appUserRepository.findByEmailAndDeletedFalse(request.email().toLowerCase().trim())
                 .orElseThrow(() -> new ValidationException("Invalid or expired verification code"));
 
         UserToken userToken = userTokenRepository.findByUserAndTokenAndTokenType(user, request.otp().trim(), UserToken.TokenType.EMAIL_VERIFICATION)
@@ -110,7 +128,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resendVerificationEmail(String email) {
-        AppUser user = appUserRepository.findByEmail(email.toLowerCase().trim())
+        AppUser user = appUserRepository.findByEmailAndDeletedFalse(email.toLowerCase().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.isEmailVerified()) {
@@ -136,7 +154,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        appUserRepository.findByEmail(email.toLowerCase().trim()).ifPresent(user -> {
+        appUserRepository.findByEmailAndDeletedFalse(email.toLowerCase().trim()).ifPresent(user -> {
             String otp = generateUniqueOtp();
             UserToken otpToken = UserToken.builder()
                     .user(user)
@@ -157,7 +175,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        AppUser user = appUserRepository.findByEmail(request.email().toLowerCase().trim())
+        AppUser user = appUserRepository.findByEmailAndDeletedFalse(request.email().toLowerCase().trim())
                 .orElseThrow(() -> new ValidationException("Invalid or expired password reset code"));
 
         UserToken userToken = userTokenRepository.findByUserAndTokenAndTokenType(user, request.otp().trim(), UserToken.TokenType.PASSWORD_RESET)

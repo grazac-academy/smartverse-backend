@@ -1,5 +1,6 @@
 package org.smartvert.smartvert.repository;
 
+import org.smartvert.smartvert.model.entity.AppUser;
 import org.smartvert.smartvert.model.entity.SavedCalculation;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,4 +17,6 @@ public interface SavedCalculationRepository extends JpaRepository<SavedCalculati
     Optional<SavedCalculation> findByIdAndUserId(UUID id, UUID userId);
 
     boolean existsByUserIdAndCalculationId(UUID userId, UUID calculationId);
+
+    void deleteByUser(AppUser user);
 }

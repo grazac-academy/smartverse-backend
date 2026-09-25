@@ -133,6 +133,43 @@ public class ControllerTests {
     }
 
     @Test
+    void shouldSearchAppliancesWithSpecification() throws Exception {
+        // Search matching name
+        mockMvc.perform(get("/api/v1/appliances/search")
+                .param("name", "refrig"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Appliances retrieved successfully")))
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].name", is("Refrigerator")));
+
+        // Search matching search query
+        mockMvc.perform(get("/api/v1/appliances/search")
+                .param("search", "frid"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].code", is("fridge")));
+
+        // Search matching wattage range
+        mockMvc.perform(get("/api/v1/appliances/search")
+                .param("minWattage", "200.00")
+                .param("maxWattage", "400.00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+
+        // Search with non-matching wattage range
+        mockMvc.perform(get("/api/v1/appliances/search")
+                .param("minWattage", "500.00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        // Search with category ID
+        mockMvc.perform(get("/api/v1/appliances/search")
+                .param("categoryId", categoryId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    @Test
     void shouldCalculateSizing() throws Exception {
         String requestBody = """
                 {

@@ -110,7 +110,7 @@ public class SavedCalculationServiceImpl implements SavedCalculationService {
             throw new ResourceNotFoundException("User not found");
         }
         String email = auth.getName();
-        return appUserRepository.findByEmail(email.toLowerCase().trim())
+        return appUserRepository.findByEmailAndDeletedFalse(email.toLowerCase().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
